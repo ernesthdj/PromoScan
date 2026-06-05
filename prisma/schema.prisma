@@ -1,0 +1,218 @@
+// PromoScan — Schema Prisma
+// Source de verite pour la structure BDD PostgreSQL.
+// 9 tables + 1 table cache + 4 enums.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────
+
+enum Brand {
+  colruyt
+  delhaize
+  lidl
+  aldi
+  carrefour
+  action
+}
+
+enum ProductCategory {
+  proteines
+  legumes
+  fruits
+  produits_laitiers
+  boulangerie
+  boissons
+  epicerie
+  surgeles
+  hygiene
+  entretien
+  autres
+}
+
+enum ScanJobStatus {
+  running
+  completed
+  failed
+  partial
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+// ─── Tables ────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique @db.VarChar(255)
+  passwordHash   String    @db.VarChar(255)
+  role           UserRole  @default(user)
+  zoneCodePostal String?   @db.VarChar(4)
+  zoneCommune    String?   @db.VarChar(100)
+  zoneLatitude   Float?
+  zoneLongitude  Float?
+  preferences    Json      @default("{\"w1\":0.5,\"w2\":0.3,\"w3\":0.2}")
+  rgpdConsent    Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  shoppingLists ShoppingList[]
+  savedRoutes   SavedRoute[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique @db.VarChar(512)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Store {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(255)
+  brand        Brand
+  address      String   @db.VarChar(500)
+  latitude     Float
+  longitude    Float
+  openingHours Json?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  promotions Promotion[]
+
+  @@index([brand])
+  @@map("stores")
+}
+
+model Promotion {
+  id           String          @id @default(uuid())
+  storeId      String
+  productId    String?
+  scanJobId    String
+  productName  String          @db.VarChar(500)
+  category     ProductCategory @default(autres)
+  originalPrice Decimal?       @db.Decimal(10, 2)
+  promoPrice   Decimal         @db.Decimal(10, 2)
+  discountPct  Int?            @db.SmallInt
+  startDate    DateTime        @db.Date
+  endDate      DateTime        @db.Date
+  sourceUrl    String?         @db.VarChar(1000)
+  rawText      String?
+  createdAt    DateTime        @default(now())
+
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  scanJob ScanJob  @relation(fields: [scanJobId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([category])
+  @@index([startDate, endDate])
+  @@map("promotions")
+}
+
+model Product {
+  id        String          @id @default(uuid())
+  name      String          @unique @db.VarChar(255)
+  category  ProductCategory @default(autres)
+  aliases   String[]        @default([])
+  unit      String?         @db.VarChar(50)
+  createdAt DateTime        @default(now())
+
+  promotions Promotion[]
+
+  @@map("products")
+}
+
+model ShoppingList {
+  id         String   @id @default(uuid())
+  userId     String
+  name       String   @db.VarChar(100)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ShoppingListItem[]
+
+  @@index([userId])
+  @@map("shopping_lists")
+}
+
+model ShoppingListItem {
+  id          String          @id @default(uuid())
+  listId      String
+  productName String          @db.VarChar(200)
+  category    ProductCategory @default(autres)
+  quantity    Int             @default(1) @db.SmallInt
+  checked     Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("shopping_list_items")
+}
+
+model ScanJob {
+  id              String        @id @default(uuid())
+  source          String        @db.VarChar(255)
+  status          ScanJobStatus @default(running)
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+  itemsFound      Int           @default(0)
+  imagesProcessed Int           @default(0)
+  errors          Json          @default("[]")
+  createdAt       DateTime      @default(now())
+
+  promotions Promotion[]
+
+  @@index([status])
+  @@index([startedAt(sort: Desc)])
+  @@map("scan_jobs")
+}
+
+model SavedRoute {
+  id                 String   @id @default(uuid())
+  userId             String
+  name               String?  @db.VarChar(200)
+  stores             Json
+  estimatedSavings   Decimal  @default(0) @db.Decimal(10, 2)
+  geojson            Json
+  estimatedDurationMin Int?
+  estimatedDistanceKm  Decimal? @db.Decimal(10, 1)
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("saved_routes")
+}
+
+// ─── Cache geocoding ───────────────────────────────────
+
+model GeocodeCache {
+  postalCode String   @id @db.VarChar(4)
+  commune    String   @db.VarChar(100)
+  latitude   Float
+  longitude  Float
+  cachedAt   DateTime @default(now())
+
+  @@map("geocode_cache")
+}
