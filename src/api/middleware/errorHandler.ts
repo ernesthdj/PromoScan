@@ -5,6 +5,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env';
+import { logger } from '../config/logger';
 import { Prisma } from '@prisma/client';
 
 export class AppError extends Error {
@@ -25,6 +26,7 @@ export function errorHandler(
 ): void {
   // Erreur applicative connue
   if (err instanceof AppError) {
+    logger.warn({ statusCode: err.statusCode, message: err.message }, 'AppError');
     res.status(err.statusCode).json({
       success: false,
       data: null,
@@ -36,6 +38,7 @@ export function errorHandler(
   // Erreur Prisma : contrainte unique violee (ex: email en doublon)
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
+      logger.warn({ code: err.code }, 'Prisma unique constraint violation');
       res.status(409).json({
         success: false,
         data: null,
@@ -45,6 +48,7 @@ export function errorHandler(
     }
 
     if (err.code === 'P2025') {
+      logger.warn({ code: err.code }, 'Prisma record not found');
       res.status(404).json({
         success: false,
         data: null,
@@ -56,6 +60,7 @@ export function errorHandler(
 
   // Erreur JSON invalide
   if (err instanceof SyntaxError && 'body' in err) {
+    logger.warn('Invalid JSON body received');
     res.status(400).json({
       success: false,
       data: null,
@@ -64,9 +69,10 @@ export function errorHandler(
     return;
   }
 
-  // Erreur inconnue — pas de stack trace en prod
+  // Erreur inconnue — logger l'erreur complete, reponse generique
+  logger.error({ err, stack: err.stack }, 'Unhandled error');
+
   if (env.NODE_ENV === 'development') {
-    // En dev : afficher les details pour le debug
     res.status(500).json({
       success: false,
       data: null,

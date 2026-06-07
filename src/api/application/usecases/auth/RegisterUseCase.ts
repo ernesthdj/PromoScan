@@ -1,4 +1,4 @@
-import type { IUserRepository, IRefreshTokenRepository, IGeocodeCache } from '../../../domain/entities';
+import type { IUserRepository, IRefreshTokenRepository, IGeocodeCache, IEmailService } from '../../../domain/entities';
 import { hashPassword } from '../../../infrastructure/security/hash';
 import {
   generateAccessToken,
@@ -27,6 +27,7 @@ export class RegisterUseCase {
     private userRepo: IUserRepository,
     private refreshTokenRepo: IRefreshTokenRepository,
     private geocodeCache: IGeocodeCache,
+    private emailService: IEmailService,
   ) {}
 
   async execute(input: RegisterInput): Promise<RegisterResult> {
@@ -76,6 +77,11 @@ export class RegisterUseCase {
       userId: user.id,
       tokenHash,
       expiresAt: getRefreshTokenExpiry(),
+    });
+
+    // 6. Envoyer l'email de bienvenue (fire-and-forget, ne bloque pas l'inscription)
+    this.emailService.sendWelcomeEmail(user.email).catch(() => {
+      // L'echec d'envoi email ne doit pas bloquer l'inscription
     });
 
     return {

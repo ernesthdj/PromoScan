@@ -11,7 +11,12 @@ import type {
   IUserRepository,
   PromotionWithStoreEntity,
 } from '../../../domain/entities';
-import { matchPromotions, aggregateMatchesByStore, type ItemMatchResult } from '../../../domain/services/MatchingService';
+import {
+  matchPromotions,
+  aggregateMatchesByStore,
+  type IFuzzyMatcher,
+  type ItemMatchResult,
+} from '../../../domain/services/MatchingService';
 import { rankStores, type ScoringWeights, type StoreScore } from '../../../domain/services/ScoringService';
 import { haversine } from '../../../domain/services/RoutingService';
 import { AppError } from '../../../middleware/errorHandler';
@@ -41,13 +46,13 @@ export class GetSuggestionsUseCase {
     private listRepo: IShoppingListRepository,
     private promotionRepo: IPromotionRepository,
     private storeRepo: IStoreRepository,
+    private fuzzyMatcher: IFuzzyMatcher<PromotionWithStoreEntity>,
   ) {}
 
   /**
    * Matching : retourne pour chaque article de la liste les promos qui correspondent.
    */
   async match(userId: string, listId: string, filters?: SuggestionFilters): Promise<ItemMatchResult[]> {
-    // Verifier l'ownership de la liste
     const list = await this.listRepo.findByIdWithItems(listId);
     if (!list || list.userId !== userId) {
       throw new AppError(404, 'Liste introuvable');
@@ -57,10 +62,8 @@ export class GetSuggestionsUseCase {
       return [];
     }
 
-    // Recuperer les promos actives (avec filtres optionnels)
     let promos = await this.promotionRepo.findActiveForMatching();
 
-    // Appliquer les filtres
     if (filters?.categories && filters.categories.length > 0) {
       promos = promos.filter((p) => filters.categories!.includes(p.category));
     }
@@ -74,8 +77,7 @@ export class GetSuggestionsUseCase {
       );
     }
 
-    // Fuzzy matching
-    return matchPromotions(list.items, promos);
+    return matchPromotions(list.items, promos, this.fuzzyMatcher);
   }
 
   /**
@@ -86,10 +88,8 @@ export class GetSuggestionsUseCase {
     listId: string,
     filters?: SuggestionFilters,
   ): Promise<StoreRecommendationResult[]> {
-    // Recuperer les matchs
     const matchResults = await this.match(userId, listId, filters);
 
-    // Recuperer l'utilisateur pour ses coordonnees et preferences
     const user = await this.userRepo.findById(userId);
     if (!user) {
       throw new AppError(404, 'Utilisateur introuvable');
@@ -104,23 +104,19 @@ export class GetSuggestionsUseCase {
       throw new AppError(404, 'Liste introuvable');
     }
 
-    // Agreger par magasin
     const storeAggregation = aggregateMatchesByStore(matchResults);
 
     if (storeAggregation.size === 0) {
       return [];
     }
 
-    // Calculer les distances et scores
     const userCoords = { lat: user.zoneLatitude, lng: user.zoneLongitude };
     const weights: ScoringWeights = user.preferences;
 
-    // Recuperer les stores complets
     const storeIds = Array.from(storeAggregation.keys());
     const stores = await this.storeRepo.findByIds(storeIds);
     const storeMap = new Map(stores.map((s) => [s.id, s]));
 
-    // Preparer les inputs de scoring
     const scoringInputs = Array.from(storeAggregation.entries())
       .filter(([storeId]) => storeMap.has(storeId))
       .map(([storeId, agg]) => {
@@ -137,7 +133,6 @@ export class GetSuggestionsUseCase {
 
     const ranked = rankStores(scoringInputs, list.items.length, weights);
 
-    // Construire la reponse
     const allPromos = await this.promotionRepo.findActiveForMatching();
     const promoMap = new Map(allPromos.map((p) => [p.id, p]));
 

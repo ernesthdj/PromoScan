@@ -8,6 +8,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import { env } from './config/env';
+import { logger } from './config/logger';
 import { corsConfig } from './config/cors';
 import { globalLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
@@ -49,12 +50,8 @@ app.use(errorHandler);
 // ─── Demarrage ─────────────────────────────────────────
 
 app.listen(env.PORT, () => {
-  if (env.NODE_ENV === 'development') {
-    // Autorise en dev uniquement pour confirmer le demarrage
-    // eslint-disable-next-line no-console
-    console.log(`[PromoScan API] Running on http://localhost:${env.PORT}`);
-    console.log(`[PromoScan API] Environment: ${env.NODE_ENV}`);
-  }
+  logger.info({ port: env.PORT, env: env.NODE_ENV }, 'PromoScan API started');
 });
 
+export { logger };
 export default app;

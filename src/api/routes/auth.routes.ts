@@ -11,6 +11,7 @@ import { LogoutUseCase } from '../application/usecases/auth/LogoutUseCase';
 import { UserRepository } from '../infrastructure/repositories/UserRepository';
 import { RefreshTokenRepository } from '../infrastructure/repositories/RefreshTokenRepository';
 import { GeocodeCacheRepository } from '../infrastructure/repositories/GeocodeCacheRepository';
+import { ConsoleEmailService } from '../infrastructure/email/ConsoleEmailService';
 
 const router = Router();
 
@@ -25,6 +26,7 @@ router.post(
         new UserRepository(),
         new RefreshTokenRepository(),
         new GeocodeCacheRepository(),
+        new ConsoleEmailService(),
       );
       const result = await useCase.execute(req.body);
       res.status(201).json({ success: true, data: result, error: null });

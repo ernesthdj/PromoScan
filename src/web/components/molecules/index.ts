@@ -7,3 +7,4 @@ export { ScoreIndicator } from './ScoreIndicator';
 export { PriceDisplay } from './PriceDisplay';
 export { EmptyState } from './EmptyState';
 export { RouteStopCard } from './RouteStopCard';
+export { StoreRow } from './StoreRow';

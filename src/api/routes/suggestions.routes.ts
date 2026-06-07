@@ -8,6 +8,7 @@ import { UserRepository } from '../infrastructure/repositories/UserRepository';
 import { ShoppingListRepository } from '../infrastructure/repositories/ShoppingListRepository';
 import { PromotionRepository } from '../infrastructure/repositories/PromotionRepository';
 import { StoreRepository } from '../infrastructure/repositories/StoreRepository';
+import { FuseMatchingAdapter } from '../infrastructure/matching/FuseMatchingAdapter';
 
 const router = Router();
 router.use(authMiddleware);
@@ -18,6 +19,7 @@ function buildUseCase() {
     new ShoppingListRepository(),
     new PromotionRepository(),
     new StoreRepository(),
+    new FuseMatchingAdapter(),
   );
 }
 

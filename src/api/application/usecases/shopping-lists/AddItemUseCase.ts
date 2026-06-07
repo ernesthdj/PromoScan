@@ -1,6 +1,7 @@
 import type {
   IShoppingListRepository,
   IShoppingListItemRepository,
+  IProductRepository,
   ShoppingListItemEntity,
 } from '../../../domain/entities';
 import { AppError } from '../../../middleware/errorHandler';
@@ -11,6 +12,7 @@ export class AddItemUseCase {
   constructor(
     private listRepo: IShoppingListRepository,
     private itemRepo: IShoppingListItemRepository,
+    private productRepo: IProductRepository,
   ) {}
 
   async execute(
@@ -32,10 +34,19 @@ export class AddItemUseCase {
       });
     }
 
+    // Auto-categorisation : si pas de categorie fournie, chercher dans la table Product
+    let category = input.category ?? ProductCategory.AUTRES;
+    if (!input.category) {
+      const knownProduct = await this.productRepo.findByName(input.productName);
+      if (knownProduct) {
+        category = knownProduct.category;
+      }
+    }
+
     return this.itemRepo.create({
       listId,
       productName: input.productName,
-      category: input.category ?? ProductCategory.AUTRES,
+      category,
       quantity: input.quantity ?? 1,
     });
   }

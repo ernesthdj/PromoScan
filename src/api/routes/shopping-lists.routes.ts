@@ -17,6 +17,7 @@ import { UpdateItemUseCase } from '../application/usecases/shopping-lists/Update
 import { DeleteItemUseCase } from '../application/usecases/shopping-lists/DeleteItemUseCase';
 import { ShoppingListRepository } from '../infrastructure/repositories/ShoppingListRepository';
 import { ShoppingListItemRepository } from '../infrastructure/repositories/ShoppingListItemRepository';
+import { ProductRepository } from '../infrastructure/repositories/ProductRepository';
 import { AppError } from '../middleware/errorHandler';
 
 const router = Router();
@@ -121,6 +122,7 @@ router.post(
       const useCase = new AddItemUseCase(
         new ShoppingListRepository(),
         new ShoppingListItemRepository(),
+        new ProductRepository(),
       );
       const item = await useCase.execute(req.userId!, req.params.listId, req.body);
       res.status(201).json({ success: true, data: item, error: null });

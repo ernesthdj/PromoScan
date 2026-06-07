@@ -6,3 +6,5 @@ export { Tag } from './Tag';
 export { Icon } from './Icon';
 export { Spinner } from './Spinner';
 export { Toast } from './Toast';
+export { Avatar } from './Avatar';
+export { Divider } from './Divider';

@@ -7,3 +7,4 @@ export { MapView } from './MapView';
 export { RouteSummary } from './RouteSummary';
 export { FilterBar } from './FilterBar';
 export { HeroSection } from './HeroSection';
+export { ProfileSection } from './ProfileSection';

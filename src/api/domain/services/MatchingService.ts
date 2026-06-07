@@ -1,14 +1,24 @@
 /**
  * MatchingService — Fuzzy matching entre articles de la liste et promotions actives.
  *
- * Utilise fuse.js pour la correspondance approximative.
- * Ex : "poulet" matche "filet de poulet", "blanc de poulet".
- *
- * Dependance : fuse.js (librairie pure, pas un framework).
+ * Interface pure sans dependance framework (Clean Architecture).
+ * L'implementation concrete (Fuse.js) est dans infrastructure/matching/.
  */
 
-import Fuse from 'fuse.js';
 import type { PromotionWithStoreEntity, ShoppingListItemEntity, StoreEntity } from '../entities';
+
+// ─── Port (interface domain) ──────────────────────────
+
+export interface FuzzySearchResult<T> {
+  item: T;
+  score: number; // 0 = exact, 1 = aucune correspondance
+}
+
+export interface IFuzzyMatcher<T> {
+  search(items: T[], query: string, threshold: number): FuzzySearchResult<T>[];
+}
+
+// ─── Types ────────────────────────────────────────────
 
 export interface MatchedPromotion {
   promotion: PromotionWithStoreEntity;
@@ -28,18 +38,6 @@ export interface ItemMatchResult {
 /** Seuil de matching par defaut (0 = exact, 1 = tout matche) */
 const DEFAULT_THRESHOLD = 0.4;
 
-const FUSE_OPTIONS: Fuse.IFuseOptions<PromotionWithStoreEntity> = {
-  keys: [
-    { name: 'productName', weight: 0.7 },
-  ],
-  threshold: DEFAULT_THRESHOLD,
-  distance: 100,
-  isCaseSensitive: false,
-  useExtendedSearch: true,
-  includeScore: true,
-  minMatchCharLength: 2,
-};
-
 /**
  * Matche les articles d'une liste de courses avec les promotions actives.
  * Retourne pour chaque article les promotions qui correspondent.
@@ -47,26 +45,25 @@ const FUSE_OPTIONS: Fuse.IFuseOptions<PromotionWithStoreEntity> = {
 export function matchPromotions(
   listItems: ShoppingListItemEntity[],
   activePromotions: PromotionWithStoreEntity[],
+  fuzzyMatcher: IFuzzyMatcher<PromotionWithStoreEntity>,
   threshold: number = DEFAULT_THRESHOLD,
 ): ItemMatchResult[] {
-  const options = { ...FUSE_OPTIONS, threshold };
-  const fuse = new Fuse(activePromotions, options);
+  return listItems.map((item) => {
+    const results = fuzzyMatcher.search(activePromotions, item.productName, threshold);
 
-  return listItems.map((item) => ({
-    listItem: {
-      id: item.id,
-      productName: item.productName,
-      category: item.category,
-    },
-    matches: fuse
-      .search(item.productName)
-      .filter((r) => r.score !== undefined && r.score <= threshold)
-      .map((r) => ({
+    return {
+      listItem: {
+        id: item.id,
+        productName: item.productName,
+        category: item.category,
+      },
+      matches: results.map((r) => ({
         promotion: r.item,
         store: r.item.store,
-        fuzzyScore: 1 - (r.score ?? 1), // Inverser : 1 = correspondance parfaite
+        fuzzyScore: 1 - r.score, // Inverser : 1 = correspondance parfaite
       })),
-  }));
+    };
+  });
 }
 
 /**
@@ -82,7 +79,6 @@ export function aggregateMatchesByStore(
   >();
 
   for (const result of matchResults) {
-    // Pour chaque article, on prend la meilleure promo par magasin (eviter les doublons)
     const bestByStore = new Map<string, MatchedPromotion>();
     for (const match of result.matches) {
       const existing = bestByStore.get(match.store.id);

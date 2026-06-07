@@ -82,6 +82,10 @@ export interface IGeocodeCache {
   searchPostalCodes(query: string): Promise<PostalCodeEntry[]>;
 }
 
+export interface IEmailService {
+  sendWelcomeEmail(to: string): Promise<void>;
+}
+
 // ─── Entity Types ──────────────────────────────────────
 
 export interface UserEntity {
