@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build:web",
+  "outputDirectory": "dist-web",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://promoscan-api.onrender.com/api/v1/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

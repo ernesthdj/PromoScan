@@ -1,0 +1,43 @@
+# render.yaml — Configuration de deploiement Render
+#
+# Ce fichier dit a Render :
+# 1. "Cree une base de donnees PostgreSQL a Frankfurt"
+# 2. "Deploie le backend Node.js a Frankfurt"
+# 3. "Connecte les deux ensemble"
+#
+# Pour deployer : connecte ton repo GitHub sur render.com > New > Blueprint
+
+databases:
+  - name: promoscan-db
+    region: frankfurt
+    plan: free
+    databaseName: promoscan
+    user: promoscan
+
+services:
+  - type: web
+    name: promoscan-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: promoscan-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLAUDE_API_KEY
+        sync: false
+      - key: ORS_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
