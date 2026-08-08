@@ -1,15 +1,29 @@
 {
-  "buildCommand": "npm run build:web",
-  "outputDirectory": "dist-web",
-  "framework": "vite",
-  "rewrites": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://promoscan-api.onrender.com/api/v1/:path*"
+      "path": "/api/cron/collect-promotions/colruyt",
+      "schedule": "0 3 * * 1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "path": "/api/cron/collect-promotions/aldi",
+      "schedule": "5 3 * * 1"
+    },
+    {
+      "path": "/api/cron/collect-promotions/delhaize",
+      "schedule": "10 3 * * 1"
+    },
+    {
+      "path": "/api/cron/collect-promotions/lidl",
+      "schedule": "20 3 * * 1"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/cron/collect-promotions/[chain]/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/collections/trigger/route.ts": {
+      "maxDuration": 300
+    }
+  }
 }

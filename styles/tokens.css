@@ -1,0 +1,125 @@
+/* styles/tokens.css
+ *
+ * Source de vérité des design tokens (règle Frontend globale). Les tokens de statut sont repris
+ * tels quels de docs/PALETTE.md §5 (ne pas modifier les valeurs sans repasser par ce document).
+ * Les tokens "base" (fond, surface, texte, bordure, accent) ne sont PAS spécifiés par
+ * UI-DESIGN.md/PALETTE.md (ces documents ne couvrent que la palette sémantique des statuts) —
+ * décision Frontend (#5) : palette neutre gris + un accent bleu unique pour le CTA primaire,
+ * cohérente avec le non-objectif explicite de UI-DESIGN §0 ("pas de wow visuel, dashboard
+ * technique"). Contrastes vérifiés à l'œil (gray-900/white ≈ 17:1, gray-600/white ≈ 5.7:1) mais
+ * pas passés dans un outil dédié (même réserve que PALETTE.md §4 — signalé au QA).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* --- Base — light (défaut) --- */
+  --base-bg: #F9FAFB;
+  --base-surface: #FFFFFF;
+  --base-surface-hover: #F3F4F6;
+  --base-border: #E5E7EB;
+  --base-text: #111827;
+  --base-text-secondary: #4B5563;
+  --base-text-muted: #6B7280;
+  --base-accent: #2563EB;
+  --base-accent-fg: #FFFFFF;
+  --base-accent-hover: #1D4ED8;
+  --base-focus-ring: #2563EB;
+  --base-danger: #B91C1C;
+  --base-danger-hover: #991B1B;
+
+  /* --- Statuts — light (docs/PALETTE.md §3) --- */
+  --status-success-bg: #DCFCE7;
+  --status-success-fg: #15803D;
+  --status-success-border: #86EFAC;
+
+  --status-warning-bg: #FEF3C7;
+  --status-warning-fg: #92400E;
+  --status-warning-border: #FCD34D;
+
+  --status-error-bg: #FEE2E2;
+  --status-error-fg: #B91C1C;
+  --status-error-border: #FCA5A5;
+
+  --status-info-bg: #DBEAFE;
+  --status-info-fg: #1D4ED8;
+  --status-info-border: #93C5FD;
+
+  --status-neutral-bg: #F3F4F6;
+  --status-neutral-fg: #374151;
+  --status-neutral-border: #D1D5DB;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --base-bg: #0B0F17;
+    --base-surface: #131A26;
+    --base-surface-hover: #1B2433;
+    --base-border: #263041;
+    --base-text: #F3F4F6;
+    --base-text-secondary: #B4BCC9;
+    --base-text-muted: #8B95A5;
+    --base-accent: #3B82F6;
+    --base-accent-fg: #0B0F17;
+    --base-accent-hover: #60A5FA;
+    --base-focus-ring: #60A5FA;
+    --base-danger: #FCA5A5;
+    --base-danger-hover: #FECACA;
+
+    --status-success-bg: #052E16;
+    --status-success-fg: #86EFAC;
+    --status-success-border: #166534;
+
+    --status-warning-bg: #451A03;
+    --status-warning-fg: #FCD34D;
+    --status-warning-border: #92400E;
+
+    --status-error-bg: #450A0A;
+    --status-error-fg: #FCA5A5;
+    --status-error-border: #B91C1C;
+
+    --status-info-bg: #172554;
+    --status-info-fg: #93C5FD;
+    --status-info-border: #1D4ED8;
+
+    --status-neutral-bg: #1F2937;
+    --status-neutral-fg: #D1D5DB;
+    --status-neutral-border: #4B5563;
+  }
+}
+
+:root[data-theme='dark'] {
+  --base-bg: #0B0F17;
+  --base-surface: #131A26;
+  --base-surface-hover: #1B2433;
+  --base-border: #263041;
+  --base-text: #F3F4F6;
+  --base-text-secondary: #B4BCC9;
+  --base-text-muted: #8B95A5;
+  --base-accent: #3B82F6;
+  --base-accent-fg: #0B0F17;
+  --base-accent-hover: #60A5FA;
+  --base-focus-ring: #60A5FA;
+  --base-danger: #FCA5A5;
+  --base-danger-hover: #FECACA;
+
+  --status-success-bg: #052E16;
+  --status-success-fg: #86EFAC;
+  --status-success-border: #166534;
+
+  --status-warning-bg: #451A03;
+  --status-warning-fg: #FCD34D;
+  --status-warning-border: #92400E;
+
+  --status-error-bg: #450A0A;
+  --status-error-fg: #FCA5A5;
+  --status-error-border: #B91C1C;
+
+  --status-info-bg: #172554;
+  --status-info-fg: #93C5FD;
+  --status-info-border: #1D4ED8;
+
+  --status-neutral-bg: #1F2937;
+  --status-neutral-fg: #D1D5DB;
+  --status-neutral-border: #4B5563;
+}

@@ -1,60 +1,63 @@
-/**
- * Config Tailwind — utilise les design tokens CSS comme source de verite.
- */
-
 import type { Config } from 'tailwindcss';
 
-export default {
-  content: ['./index.html', './src/web/**/*.{ts,tsx}'],
+// Tokens de statut repris tels quels de docs/PALETTE.md §6 (mapping Tailwind). Les couleurs
+// "base" (fond/surface/texte/bordure/accent) sont une extension Frontend (#5) — non spécifiées
+// par PALETTE.md/UI-DESIGN.md qui ne couvrent que la palette sémantique des statuts — voir
+// styles/tokens.css pour la justification. Toutes les valeurs pointent vers des CSS custom
+// properties (jamais de couleur codée en dur ici) : le mode sombre est géré par la bascule des
+// variables dans tokens.css, pas par les classes `dark:` de Tailwind.
+const config: Config = {
+  darkMode: ['selector', '[data-theme="dark"]'],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: 'var(--color-primary-50)',
-          100: 'var(--color-primary-100)',
-          200: 'var(--color-primary-200)',
-          300: 'var(--color-primary-300)',
-          400: 'var(--color-primary-400)',
-          500: 'var(--color-primary-500)',
-          600: 'var(--color-primary-600)',
-          700: 'var(--color-primary-700)',
-          800: 'var(--color-primary-800)',
-          900: 'var(--color-primary-900)',
+        base: {
+          bg: 'var(--base-bg)',
+          surface: 'var(--base-surface)',
+          'surface-hover': 'var(--base-surface-hover)',
+          border: 'var(--base-border)',
+          text: 'var(--base-text)',
+          'text-secondary': 'var(--base-text-secondary)',
+          'text-muted': 'var(--base-text-muted)',
+          accent: 'var(--base-accent)',
+          'accent-fg': 'var(--base-accent-fg)',
+          'accent-hover': 'var(--base-accent-hover)',
+          'focus-ring': 'var(--base-focus-ring)',
+          danger: 'var(--base-danger)',
+          'danger-hover': 'var(--base-danger-hover)',
         },
-        secondary: {
-          50: 'var(--color-secondary-50)',
-          100: 'var(--color-secondary-100)',
-          200: 'var(--color-secondary-200)',
-          300: 'var(--color-secondary-300)',
-          400: 'var(--color-secondary-400)',
-          500: 'var(--color-secondary-500)',
-          600: 'var(--color-secondary-600)',
-          700: 'var(--color-secondary-700)',
-          800: 'var(--color-secondary-800)',
-          900: 'var(--color-secondary-900)',
+        status: {
+          success: {
+            bg: 'var(--status-success-bg)',
+            fg: 'var(--status-success-fg)',
+            border: 'var(--status-success-border)',
+          },
+          warning: {
+            bg: 'var(--status-warning-bg)',
+            fg: 'var(--status-warning-fg)',
+            border: 'var(--status-warning-border)',
+          },
+          error: {
+            bg: 'var(--status-error-bg)',
+            fg: 'var(--status-error-fg)',
+            border: 'var(--status-error-border)',
+          },
+          info: {
+            bg: 'var(--status-info-bg)',
+            fg: 'var(--status-info-fg)',
+            border: 'var(--status-info-border)',
+          },
+          neutral: {
+            bg: 'var(--status-neutral-bg)',
+            fg: 'var(--status-neutral-fg)',
+            border: 'var(--status-neutral-border)',
+          },
         },
-        accent: {
-          50: 'var(--color-accent-50)',
-          100: 'var(--color-accent-100)',
-          200: 'var(--color-accent-200)',
-          300: 'var(--color-accent-300)',
-          400: 'var(--color-accent-400)',
-          500: 'var(--color-accent-500)',
-          600: 'var(--color-accent-600)',
-          700: 'var(--color-accent-700)',
-          800: 'var(--color-accent-800)',
-          900: 'var(--color-accent-900)',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-      },
-      transitionDuration: {
-        fast: '150ms',
-        normal: '250ms',
-        slow: '400ms',
       },
     },
   },
   plugins: [],
-} satisfies Config;
+};
+
+export default config;

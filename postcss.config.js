@@ -1,5 +1,4 @@
-/** PostCSS — active Tailwind et autoprefixer (compatibilite navigateurs). */
-export default {
+module.exports = {
   plugins: {
     tailwindcss: {},
     autoprefixer: {},

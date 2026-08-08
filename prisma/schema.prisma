@@ -1,218 +1,164 @@
-// PromoScan — Schema Prisma
-// Source de verite pour la structure BDD PostgreSQL.
-// 9 tables + 1 table cache + 4 enums.
+// PromoScan — Schéma Prisma (F1 — Collecte & structuration des promotions)
+// Source : docs/ARCHITECTURE.md §2.2 (spécification définitive validée par l'Architecte #2)
+// Reproduit tel quel — ne pas modifier sans repasser par une décision d'architecture documentée.
+//
+// Périmètre strict F1 : StoreChain, Product, Promotion, CollectionRun, CollectionRunChain sont
+// les tables actives de F1. User/DietProfile/Budget/Circuit/StoreLocation sont des squelettes
+// F2/F3/F4 non détaillés — aucune règle métier n'y est attachée à ce stade (cf. ARCHITECTURE §2.2).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ─── Enums ─────────────────────────────────────────────
-
-enum Brand {
-  colruyt
-  delhaize
-  lidl
-  aldi
-  carrefour
-  action
+enum StoreStrategy {
+  api
+  html
+  headless
 }
 
-enum ProductCategory {
-  proteines
-  legumes
-  fruits
-  produits_laitiers
-  boulangerie
-  boissons
-  epicerie
-  surgeles
-  hygiene
-  entretien
-  autres
-}
-
-enum ScanJobStatus {
+enum CollectionRunStatus {
   running
-  completed
-  failed
   partial
+  complete
+  failed
 }
 
-enum UserRole {
-  user
-  admin
+enum ChainRunStatus {
+  pending
+  running
+  complete
+  failed
+  format_drift
 }
 
-// ─── Tables ────────────────────────────────────────────
-
-model User {
-  id             String    @id @default(uuid())
-  email          String    @unique @db.VarChar(255)
-  passwordHash   String    @db.VarChar(255)
-  role           UserRole  @default(user)
-  zoneCodePostal String?   @db.VarChar(4)
-  zoneCommune    String?   @db.VarChar(100)
-  zoneLatitude   Float?
-  zoneLongitude  Float?
-  preferences    Json      @default("{\"w1\":0.5,\"w2\":0.3,\"w3\":0.2}")
-  rgpdConsent    Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  shoppingLists ShoppingList[]
-  savedRoutes   SavedRoute[]
-  refreshTokens RefreshToken[]
-
-  @@map("users")
+enum RunTrigger {
+  cron
+  manual
 }
 
-model RefreshToken {
-  id        String   @id @default(uuid())
-  userId    String
-  tokenHash String   @unique @db.VarChar(512)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+model StoreChain {
+  id                   String        @id @default(cuid())
+  slug                 String        @unique // "colruyt" | "aldi" | "delhaize" | "lidl"
+  name                 String
+  strategy             StoreStrategy
+  baseUrl              String
+  isActive             Boolean       @default(true)
+  crawlDelayMs         Int           @default(2000) // 5000 chez Colruyt (RG explicite), 2000 par defaut sinon
+  formatDriftThreshold Float         @default(0.5)  // seuil relatif de baisse (0.5 = -50%), configurable par enseigne
+  promotions           Promotion[]
+  runChains            CollectionRunChain[]
+  // Back-relation requise par Prisma pour StoreLocation.storeChain ci-dessous (absente du
+  // schéma tel que spécifié dans ARCHITECTURE.md §2.2 — bug de schéma détecté à la génération
+  // Prisma, corrigé ici : `prisma generate` échoue sans elle. Aucune règle métier ajoutée,
+  // uniquement le champ de relation symétrique obligatoire côté "un" de la relation un-à-plusieurs).
+  storeLocations       StoreLocation[]
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("refresh_tokens")
-}
-
-model Store {
-  id           String   @id @default(uuid())
-  name         String   @db.VarChar(255)
-  brand        Brand
-  address      String   @db.VarChar(500)
-  latitude     Float
-  longitude    Float
-  openingHours Json?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-
-  promotions Promotion[]
-
-  @@index([brand])
-  @@map("stores")
-}
-
-model Promotion {
-  id           String          @id @default(uuid())
-  storeId      String
-  productId    String?
-  scanJobId    String
-  productName  String          @db.VarChar(500)
-  category     ProductCategory @default(autres)
-  originalPrice Decimal?       @db.Decimal(10, 2)
-  promoPrice   Decimal         @db.Decimal(10, 2)
-  discountPct  Int?            @db.SmallInt
-  startDate    DateTime        @db.Date
-  endDate      DateTime        @db.Date
-  sourceUrl    String?         @db.VarChar(1000)
-  rawText      String?
-  createdAt    DateTime        @default(now())
-
-  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  scanJob ScanJob  @relation(fields: [scanJobId], references: [id], onDelete: Cascade)
-
-  @@index([storeId])
-  @@index([category])
-  @@index([startDate, endDate])
-  @@map("promotions")
+  @@map("store_chains")
 }
 
 model Product {
-  id        String          @id @default(uuid())
-  name      String          @unique @db.VarChar(255)
-  category  ProductCategory @default(autres)
-  aliases   String[]        @default([])
-  unit      String?         @db.VarChar(50)
-  createdAt DateTime        @default(now())
-
-  promotions Promotion[]
+  id            String      @id @default(cuid())
+  canonicalName String
+  category      String?
+  aliases       String[]
+  promotions    Promotion[]
 
   @@map("products")
 }
 
-model ShoppingList {
-  id         String   @id @default(uuid())
-  userId     String
-  name       String   @db.VarChar(100)
-  isArchived Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model Promotion {
+  id              String     @id @default(cuid())
+  storeChainId    String
+  storeChain      StoreChain @relation(fields: [storeChainId], references: [id])
+  productId       String?
+  product         Product?   @relation(fields: [productId], references: [id])
+  rawProductName  String
+  category        String?
+  unitLabel       String?
+  regularPrice    Decimal?   @db.Decimal(10, 2)
+  promoPrice      Decimal    @db.Decimal(10, 2)
+  discountPercent Float?
+  pricePerUnit    Decimal?   @db.Decimal(10, 2)
+  originLabel     String?
+  validFrom       DateTime
+  validTo         DateTime
+  sourceUrl       String
+  collectedAt     DateTime   @default(now())
 
-  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items ShoppingListItem[]
-
-  @@index([userId])
-  @@map("shopping_lists")
+  @@unique([storeChainId, rawProductName, validFrom]) // idempotence (US-F1-12)
+  @@index([storeChainId, validFrom])
+  @@index([productId])
+  @@map("promotions")
 }
 
-model ShoppingListItem {
-  id          String          @id @default(uuid())
-  listId      String
-  productName String          @db.VarChar(200)
-  category    ProductCategory @default(autres)
-  quantity    Int             @default(1) @db.SmallInt
-  checked     Boolean         @default(false)
-  createdAt   DateTime        @default(now())
+model CollectionRun {
+  id         String               @id @default(cuid())
+  weekKey    String?              @unique // ex "2026-W32" ; NULL pour un declenchement manuel (Postgres : NULL != NULL, plusieurs manuels coexistent)
+  trigger    RunTrigger
+  startedAt  DateTime             @default(now())
+  finishedAt DateTime?
+  status     CollectionRunStatus  @default(running) // agrege, recalcule a chaque ecriture d'un CollectionRunChain enfant
+  chains     CollectionRunChain[]
 
-  list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
-
-  @@index([listId])
-  @@map("shopping_list_items")
-}
-
-model ScanJob {
-  id              String        @id @default(uuid())
-  source          String        @db.VarChar(255)
-  status          ScanJobStatus @default(running)
-  startedAt       DateTime      @default(now())
-  completedAt     DateTime?
-  itemsFound      Int           @default(0)
-  imagesProcessed Int           @default(0)
-  errors          Json          @default("[]")
-  createdAt       DateTime      @default(now())
-
-  promotions Promotion[]
-
-  @@index([status])
   @@index([startedAt(sort: Desc)])
-  @@map("scan_jobs")
+  @@map("collection_runs")
 }
 
-model SavedRoute {
-  id                 String   @id @default(uuid())
-  userId             String
-  name               String?  @db.VarChar(200)
-  stores             Json
-  estimatedSavings   Decimal  @default(0) @db.Decimal(10, 2)
-  geojson            Json
-  estimatedDurationMin Int?
-  estimatedDistanceKm  Decimal? @db.Decimal(10, 1)
-  createdAt          DateTime @default(now())
+model CollectionRunChain {
+  id              String         @id @default(cuid())
+  collectionRunId String
+  collectionRun   CollectionRun  @relation(fields: [collectionRunId], references: [id])
+  storeChainId    String
+  storeChain      StoreChain     @relation(fields: [storeChainId], references: [id])
+  status          ChainRunStatus @default(pending)
+  itemsCollected  Int?
+  errorMessage    String?        // statut/code uniquement, jamais de contenu brut scrape (regle securite FOUNDATION §7)
+  startedAt       DateTime?
+  finishedAt      DateTime?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt(sort: Desc)])
-  @@map("saved_routes")
+  @@unique([collectionRunId, storeChainId]) // 1 ligne par enseigne par run — ecriture isolee, zero contention
+  @@map("collection_run_chains")
 }
 
-// ─── Cache geocoding ───────────────────────────────────
+// --- F2/F3/F4 : squelettes provisoires (hors perimetre F1, non detailles) ---
+model User {
+  id           String   @id @default(cuid()) // Supabase Auth gere le hash, id = auth.users.id
+  email        String   @unique
+  dietProfiles DietProfile[]
+  budgets      Budget[]
+  circuits     Circuit[]
+}
 
-model GeocodeCache {
-  postalCode String   @id @db.VarChar(4)
-  commune    String   @db.VarChar(100)
-  latitude   Float
-  longitude  Float
-  cachedAt   DateTime @default(now())
+model DietProfile {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  // champs non detailles — hors perimetre F1
+}
 
-  @@map("geocode_cache")
+model Budget {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  // champs non detailles — hors perimetre F1
+}
+
+model Circuit {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  // champs non detailles — hors perimetre F1
+}
+
+model StoreLocation {
+  id           String     @id @default(cuid())
+  storeChainId String
+  storeChain   StoreChain @relation(fields: [storeChainId], references: [id])
+  // champs non detailles — hors perimetre F1, source de donnees a definir pour F4
 }

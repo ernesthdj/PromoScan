@@ -3,10 +3,16 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build
+# Next.js build output
+.next/
+out/
+build/
 dist/
 dist-web/
-build/
+next-env.d.ts
+
+# Vercel
+.vercel
 
 # Environment
 .env
@@ -23,9 +29,6 @@ build/
 .DS_Store
 Thumbs.db
 
-# Prisma
-prisma/migrations/**/migration_lock.toml
-
 # Logs
 *.log
 logs/
@@ -33,5 +36,12 @@ logs/
 # Test coverage
 coverage/
 
-# n8n data (Docker volume)
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# n8n data (Docker volume) — reliquat v1, n8n n'est plus utilisé (voir ARCHITECTURE.md)
 n8n/data/
+
+# Playwright
+playwright-report/
+test-results/

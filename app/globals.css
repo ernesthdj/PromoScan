@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens de design définitifs (statuts, espacement, dark mode) : voir docs/PALETTE.md et
+   docs/UI-DESIGN.md. Ce fichier est un squelette minimal pour permettre au projet de compiler —
+   à compléter par l'agent Frontend (#5). */
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+}

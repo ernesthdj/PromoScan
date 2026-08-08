@@ -1,0 +1,26 @@
+{
+  "project": "PromoScan",
+  "type": "it",
+  "initialized_at": "2026-08-08T00:00:00",
+  "foundation_doc": "docs/FOUNDATION.md",
+  "status": "in_progress",
+  "current_phase": 6,
+  "mode": "supervised",
+  "max_iterations_gamedev": 3,
+  "phases": [
+    { "number": 1, "agent": "Product Owner", "status": "completed", "goal_condition": "User Stories rédigées pour F1 (collecte + interface de contrôle) avec format 'En tant que / je veux / afin de' et DoD mesurables ; stories stub légères pour F2/F3/F4 marquées non détaillées. Output dans docs/USER-STORIES.md + JOURNAL.md.", "started_at": "2026-08-08T00:00:00", "completed_at": "2026-08-08T00:05:00", "turns": 9, "tokens_used": 91412, "deliverables": ["docs/USER-STORIES.md"], "iteration": 1, "notes": "12 stories P0/P1 pour F1 tracees UC/RG L2-L3, stubs F2/F3/F4. 2 incertitudes signalees a l'Architecte (seuil derive de format, priorite fallback Vision)." },
+    { "number": 2, "agent": "Architect", "status": "completed", "goal_condition": "Architecture détaillée (schéma Prisma définitif, arborescence Next.js, endpoints API) cohérente avec L3-f1 et USER-STORIES.md.", "started_at": "2026-08-08T00:10:00", "completed_at": "2026-08-08T00:17:00", "turns": 12, "tokens_used": 124678, "deliverables": ["docs/ARCHITECTURE.md", "docs/API-ENDPOINTS.md"], "iteration": 1, "notes": "Seuil derive de format tranche (relatif -50% par enseigne). Cron: 4 crons distincts par enseigne + table CollectionRunChain normalisee (evite race condition). Point ouvert signale a DevOps: tier Vercel (Hobby vs Pro) pour supporter 4 crons." },
+    { "number": 3, "agent": "UI/UX Designer", "status": "completed", "goal_condition": "Wireframes/design system pour l'interface de contrôle (/dashboard/collecte) — liste promotions, historique runs, déclenchement manuel.", "started_at": "2026-08-08T00:20:00", "completed_at": "2026-08-08T00:25:00", "turns": 8, "tokens_used": 124417, "deliverables": ["docs/UI-DESIGN.md", "docs/PALETTE.md"], "iteration": 1, "notes": "Layout empile 3 zones (controle/historique/promotions), format_drift visuellement distinct de failed. Point ouvert signale a Backend: eventuel besoin d'un endpoint GET /api/collections/status pour deriver l'etat courant par enseigne." },
+    { "number": 4, "agent": "Backend Dev", "status": "completed", "goal_condition": "Implémentation du pipeline de collecte F1 (StoreAdapter Colruyt/Aldi/Delhaize/Lidl, endpoints /api/cron/collect-promotions, /api/promotions, /api/collection-runs, /api/collections/trigger) conforme à L3-f1.", "started_at": "2026-08-08T00:30:00", "completed_at": "2026-08-08T01:36:00", "turns": 91, "tokens_used": 489663, "deliverables": ["package.json", "prisma/schema.prisma", "prisma/migrations/20260808000000_init", "lib/domain/*", "lib/application/*", "lib/infrastructure/*", "app/api/*"], "iteration": 1, "notes": "tsc --noEmit et next build passent. Adaptateurs Colruyt/Aldi/Delhaize/Lidl jamais executes contre les vrais sites (pas d'acces reseau sortant dans l'environnement agent) - selfdoubt documente par adaptateur. Decision propre: ajout GET /api/collections/status (dérivation d'etat plutot que de le pousser au frontend). Migration jamais appliquee contre une vraie DB." },
+    { "number": 5, "agent": "Frontend Dev", "status": "completed", "goal_condition": "Page /dashboard/collecte implémentée conforme au design UI/UX et aux endpoints backend.", "started_at": "2026-08-08T01:40:00", "completed_at": "2026-08-08T02:03:00", "turns": 99, "tokens_used": 217406, "deliverables": ["components/atoms/*", "components/molecules/*", "app/(dashboard)/dashboard/collecte/*", "app/(auth)/login/*", "styles/tokens.css"], "iteration": 1, "notes": "tsc --noEmit et next build passent (verifie independamment). 2 incoherences reelles design vs backend trouvees et corrigees: semantique 'pending' bloquante par erreur, et /api/collections/trigger synchrone (pas fire-and-poll comme suppose par UI-DESIGN)." },
+    { "number": 6, "agent": "Test Engineer", "status": "pending", "goal_condition": "Tests couvrant les StoreAdapters, l'idempotence de l'upsert, la tolérance de panne partielle, et l'interface de contrôle.", "started_at": null, "completed_at": null, "turns": 0, "tokens_used": 0, "deliverables": [], "iteration": 1, "notes": "" },
+    { "number": 7, "agent": "QA Engineer", "status": "pending", "goal_condition": "Rapport QA validant la cohérence FOUNDATION.md vs code réel, verdict PASS/PASS WITH WARNINGS/FAIL.", "started_at": null, "completed_at": null, "turns": 0, "tokens_used": 0, "deliverables": [], "iteration": 1, "notes": "" },
+    { "number": 8, "agent": "DevOps", "status": "pending", "goal_condition": "Configuration de déploiement Vercel + Supabase + Vercel Cron documentée et prête.", "started_at": null, "completed_at": null, "turns": 0, "tokens_used": 0, "deliverables": [], "iteration": 1, "notes": "" },
+    { "number": 9, "agent": "Knowledge Curator", "status": "pending", "goal_condition": "Capitalisation dans second-brain (patterns StoreAdapter, pivot source de données, etc.).", "started_at": null, "completed_at": null, "turns": 0, "tokens_used": 0, "deliverables": [], "iteration": 1, "notes": "" }
+  ],
+  "total_tokens": 0,
+  "total_duration_minutes": 0,
+  "iterations_gamedev": 0,
+  "last_error": null,
+  "selfdoubt_global": null
+}
