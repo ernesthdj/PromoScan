@@ -15,8 +15,30 @@
 | 9 | Une relation Prisma un-a-plusieurs doit toujours declarer les deux cotes (champ scalaire + relation cote "plusieurs", tableau de back-relation cote "un") -- `prisma generate` echoue sinon avec une erreur de validation de schema, meme si un seul cote semble suffire a la lecture. Toujours executer `prisma generate` immediatement apres avoir ecrit/copie un schema, avant de continuer l'implementation | `prisma/schema.prisma` (StoreChain.storeLocations) | 2026-08-08 |
 | 10 | Une valeur "par defaut" renvoyee par une API pour signifier "aucune donnee encore" (ex. `pending` dans `GET /api/collections/status` = "jamais collecte") ne doit jamais etre confondue avec un etat transitoire reel du meme enum (`pending` = "en file d'attente avant `running`") sans verifier comment le backend l'ecrit reellement -- suivre UI-DESIGN.md a la lettre ("disabled si status in {running, pending}") aurait bloque de facon permanente le bouton de declenchement de toute enseigne jamais encore executee. Toujours tracer l'origine exacte (quel code ecrit quelle valeur, quand) avant de coder une regle d'etat derivee d'un enum partage | `app/(dashboard)/dashboard/collecte/_components/hooks.ts` (`hasActiveChain`) | 2026-08-08 |
 | 11 | Un endpoint de type "trigger" peut etre synchrone (bloquer jusqu'a la fin du traitement, ex. `POST /api/collections/trigger` qui `await`e la collecte complete avant de repondre) alors que le design UI a ete pense pour un flux asynchrone "fire-and-poll" -- toujours verifier le code reel du endpoint consomme (pas seulement son contrat documente) avant d'implementer le flux de mutation cote frontend, et adapter le feedback utilisateur (toast optimiste local plutot que tie a la reponse serveur) sans re-signaler un flux qui ne correspond pas a la realite | `app/(dashboard)/dashboard/collecte/_components/hooks.ts` (`useTriggerCollectionMutation`) | 2026-08-08 |
+| 12 | `/speckit-analyze` (GitHub Spec Kit) est en lecture seule -- il ne persiste jamais son rapport sur disque, contrairement aux autres skills speckit-*. Toujours le sauvegarder manuellement (ex. `specs/<NNN>-<slug>/analysis-report.md`) immediatement apres execution, sinon le contenu est perdu des la fin de la session | `.claude/skills/speckit-analyze/SKILL.md` | 2026-08-15 |
 
 ## Historique
+
+### SESSION 4 — 2026-08-15 (Test global : integration Spec Kit dans le workflow mentalyas)
+
+### [SPEC KIT TEST] — 2026-08-15 22:52
+**Phase :** Test d'integration (hors pipeline Hub & Spoke — validation de la nouvelle etape optionnelle entre `/brainstorm export` et `/pipeline init` documentee dans `~/.claude/CLAUDE.md`)
+**Iteration :** 1
+**Entree consommee :** `docs/FOUNDATION.md` integral, section 9.1/10.1 (F1 uniquement — seule feature detaillee L2+L3) ; `docs/ARCHITECTURE.md` et `docs/API-ENDPOINTS.md` (issus du pipeline Hub & Spoke SESSION 3, deja implemente en code reel)
+**Output produit :** `specify-cli` installe globalement (`uv tool install specify-cli`) ; `specify init --here --integration claude --script ps` execute dans ce projet (`.specify/`, `.claude/skills/speckit-*` crees) ; sequence `/speckit-constitution` -> `/speckit-specify` -> `/speckit-plan` -> `/speckit-tasks` -> `/speckit-analyze` executee a la main pour F1 (skills natifs indisponibles cette session car installes apres le figeage du registre) : `.specify/memory/constitution.md`, `specs/001-promo-collection/{spec.md, checklists/requirements.md, plan.md, research.md, data-model.md, contracts/promo-collection-api.md, quickstart.md, tasks.md, analysis-report.md}`
+**Decisions cles :**
+- Feature F1 choisie car seule assez detaillee (L2+L3) dans FOUNDATION.md pour un test representatif ; F2/F3/F4 ignorees (niveau 1 seulement)
+- 2 marqueurs [NEEDS CLARIFICATION] de `/speckit-specify` resolus par hypothese documentee plutot que bloquants (acces page de controle, visibilite des promos expirees) — a valider par mentalyas avant implementation
+- Tests inclus dans `tasks.md` malgre le flag "optionnel" du skill, car `plan.md` a lui-meme detecte un vrai gap Principle V (Test Discipline : aucun test runner configure) — juge plus important de tenir cet engagement que la lettre du skill
+**Selfdoubt applique :**
+- Confiance haute sur la mecanique globale (chaine constitution -> spec -> plan -> tasks -> analyze coherente, FR-IDs traces bout en bout)
+- Incertitude reelle et non resolue : `/speckit-analyze` a detecte une contradiction (voir Alerte ci-dessous) entre le spec genere et le comportement documente existant — decision humaine requise, non tranchee ici
+**Impact :** Confirme que l'etape Spec Kit documentee dans `~/.claude/CLAUDE.md` (§ Pipeline de developpement) fonctionne reellement et produit des artefacts exploitables. A revele 3 corrections necessaires a la doc globale (notation des commandes en tiret, portee par feature et non par projet, `/speckit-analyze` sans persistance disque) — corrigees dans `~/.claude/CLAUDE.md`, `~/.claude/agents-workflow.md`, `~/.claude/skills/pipeline/SKILL.md`, `~/.claude/skills/pipeline/agents/it/{01-product-owner,02-architect}.md`, `~/.claude/skills/brainstorm/SKILL.md`.
+**Alerte agent suivant :**
+- **A trancher avec mentalyas avant tout code lie a F1** : `specs/001-promo-collection/spec.md` (FR-013) suppose que la page de controle `/dashboard/collecte` requiert un role owner/admin, alors que `docs/API-ENDPOINTS.md:71` dit explicitement qu'aucun role particulier n'est requis (session suffit). Un des deux documents (ou le code reel) doit etre corrige — voir `specs/001-promo-collection/analysis-report.md` finding I1 pour le detail complet.
+- Findings mineurs egalement documentes dans `analysis-report.md` (C1, U1, A1) — corrections rapides de `tasks.md`/`plan.md`, non bloquantes.
+
+---
 
 ### SESSION 3 — 2026-08-08 (Pipeline v2 — F1 uniquement)
 
@@ -170,6 +192,13 @@
 - **Test Engineer (#6)** : aucun test automatise ecrit sur ce perimetre frontend (hors scope de cette tache) -- prioriser `hooks.ts` (`hasActiveChain`, `describeChainResult`, `toastKindForChainStatus`) qui sont des fonctions pures faciles a tester unitairement, et `formatRelativeTime`/`formatPrice` (`lib/utils/format.ts`).
 - **QA (#7)** : verifier en navigateur reel (jamais fait depuis ce poste, pas d'acces reseau Supabase) : (1) les contrastes des tokens `base-*` ajoutes par le Frontend (non couverts par PALETTE.md, qui ne couvre que les statuts) ; (2) le comportement du polling et de la mutation de declenchement contre un vrai run headless long (Delhaize/Lidl) pour confirmer que le flux synchrone adapte (toast optimiste + toast final base sur la reponse mutation) reste comprehensible a l'usage reel, pas seulement en theorie ; (3) la bascule table/carte de `PromotionsTable` aux 3 breakpoints reels (jamais capture d'ecran, seulement verifie par lecture de classes Tailwind) ; (4) que le formulaire de login fonctionne contre un vrai projet Supabase (jamais teste, aucun compte de test disponible depuis ce poste).
 - **DevOps (#8)** : aucune nouvelle variable d'environnement requise par le frontend (la page de login reutilise `SUPABASE_URL`/`SUPABASE_ANON_KEY` serveur existants via Server Action, pas de client navigateur Supabase) -- pas d'impact sur `.env.example` ni sur la configuration Vercel deja preparee.
+
+---
+
+### [2026-08-08] SESSION — End
+**Resume :** Pivot complet du projet (nouveau brainstorm 4 niveaux) : F1 (Collecte & structuration des promotions) detaillee en profondeur (L1+L2+L3), F2/F3/F4 restent au niveau vision. Pivot de source de collecte decouvert en cours de brainstorm (PromoPromo.be ecarte apres verification technique reelle -- donnees derriere des URLs interdites par robots.txt -- remplace par scraping direct des 4 enseignes Colruyt/Aldi/Delhaize/Lidl, verifie faisable en conditions reelles via navigateur). Pipeline Hub & Spoke Phases 1-5 executees en mode supervise : Product Owner (12 user stories F1), Architect (schema Prisma definitif, 4 crons Vercel distincts par enseigne, seuil de derive de format tranche), UI/UX Designer (ecran /dashboard/collecte, palette WCAG AA), Backend Dev (Next.js App Router, Clean Architecture, 4 StoreAdapter, 5 endpoints -- tsc/build OK, adaptateurs jamais testes contre les vrais sites faute d'acces reseau agent), Frontend Dev (ecran complet, 2 incoherences design/backend reelles trouvees et corrigees). Ancien code v1 (Express/Vite) et anciens docs (fondation a un seul niveau) archives dans `_archive-v1/` et `docs/_archive-v1/`.
+**Branche :** master
+**Commits pushes :** 1 (284717b -- 241 fichiers)
 
 ---
 
